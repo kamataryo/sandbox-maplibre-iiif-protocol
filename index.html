@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Document</title>
+  <style>
+    html, body, #map {
+      width: 100%;
+      height: 100%;
+      padding: 0;
+      margin: 0;
+    }
+  </style>
+</head>
+<body>
+  <div id="map"></div>
+  <script src="https://cdn.geolonia.com/v1/embed?geolonia-api-key=YOUR-API-KEY"></script>
+  <script>
+    let cachedManifest = null
+
+    geolonia.addProtocol('iiif', (params, callback) => {
+      const width = 1910 // TODO: manifest から取得
+      const height = 2700 // TODO: manifest から取得
+      const [urlTemplate, search] = params.url.replace('iiif://', '').split('?')
+      const [z, x, y] = search.replace('zxy=', '').split('/').map(val => parseInt(val, 10))
+
+      const left = x * width / (2 ** z)
+      const top = y * height / (2 ** z)
+      const w = (x + 1) * width / (2 ** z) - left
+      const h = (y + 1) * height / (2 ** z) - top
+
+      const region = `${left},${top},${w},${h}`
+      const url = urlTemplate.replace('{region}', region)
+      console.log(search, url)
+
+      fetch(url)
+        .then(resp => {
+          if(resp.status === 200) {
+            return resp.arrayBuffer()
+          } else {
+            return new Error(`Failed to fetch ${search}`)
+          }
+        })
+        .then((data) => {
+          if(data instanceof Error) {
+            callback(data)
+          } else {
+            callback(null, data)
+          }
+        })
+    })
+
+    const map = new geolonia.Map('#map')
+    map.on('load', () => {
+      map.addLayer({
+        id: 'iiif',
+        type: 'raster',
+        source: {
+          type: 'raster',
+          tiles: [
+            'iiif://https://www.arc.ritsumei.ac.jp/images/PB/Scaler/iiif/arc!Books!arcBK!arcBK01-0041!arcBK01-0041_16/{region}/256,256/0/default.jpg?zxy={z}/{x}/{y}'
+          ],
+          tileSize: 256,
+        },
+        paint: {
+          'raster-opacity': .6
+        }
+      })
+    })
+  </script>
+</body>
+</html>
