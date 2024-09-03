@@ -5,6 +5,7 @@
   <meta http-equiv="X-UA-Compatible" content="IE=edge">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Document</title>
+  <link rel="stylesheet" href="https://unpkg.com/maplibre-gl@4.6.0/dist/maplibre-gl.css">
   <style>
     html, body, #map {
       width: 100%;
@@ -16,11 +17,11 @@
 </head>
 <body>
   <div id="map"></div>
-  <script src="https://cdn.geolonia.com/v1/embed?geolonia-api-key=YOUR-API-KEY"></script>
+  <script src="https://unpkg.com/maplibre-gl/dist/maplibre-gl.js"></script>
   <script>
     let cachedManifest = null
 
-    geolonia.addProtocol('iiif', (params, callback) => {
+    maplibregl.addProtocol('iiif', async (params) => {
       const width = 1910 // TODO: manifest から取得
       const height = 2700 // TODO: manifest から取得
       const [urlTemplate, search] = params.url.replace('iiif://', '').split('?')
@@ -35,25 +36,20 @@
       const url = urlTemplate.replace('{region}', region)
       console.log(search, url)
 
-      fetch(url)
-        .then(resp => {
-          if(resp.status === 200) {
-            return resp.arrayBuffer()
-          } else {
-            return new Error(`Failed to fetch ${search}`)
-          }
-        })
-        .then((data) => {
-          if(data instanceof Error) {
-            callback(data)
-          } else {
-            callback(null, data)
-          }
-        })
+      const resp = await fetch(url)
+      const data = await resp.arrayBuffer()
+      return { data }
     })
 
-    const map = new geolonia.Map('#map')
+    const container = document.getElementById('map')
+    const map = new maplibregl.Map({ container,
+      style: 'https://demotiles.maplibre.org/style.json', // style URL
+        center: [0, 0], // starting position [lng, lat]
+        zoom: 1 // starting zoom
+     })
+
     map.on('load', () => {
+      alert(1)
       map.addLayer({
         id: 'iiif',
         type: 'raster',
